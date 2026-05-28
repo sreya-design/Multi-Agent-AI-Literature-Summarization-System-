@@ -122,14 +122,23 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Configuration")
 
-    api_key = st.text_input(
-        "Gemini API Key",
+    gemini_key = st.text_input(
+        "Gemini API Key (primary)",
         value=os.getenv("GEMINI_API_KEY", ""),
         type="password",
         help="Get your key at https://aistudio.google.com/app/apikey",
     )
-    if api_key:
-        os.environ["GEMINI_API_KEY"] = api_key
+    if gemini_key:
+        os.environ["GEMINI_API_KEY"] = gemini_key
+
+    openai_key = st.text_input(
+        "OpenAI API Key (fallback)",
+        value=os.getenv("OPENAI_API_KEY", ""),
+        type="password",
+        help="Used automatically if Gemini quota is exceeded",
+    )
+    if openai_key:
+        os.environ["OPENAI_API_KEY"] = openai_key
 
     st.divider()
 
