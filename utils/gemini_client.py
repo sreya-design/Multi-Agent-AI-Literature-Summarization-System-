@@ -11,44 +11,44 @@ def call_gemini(prompt: str, retries: int = 3, delay: float = 2.0) -> Optional[s
     import google.generativeai as genai
     genai.configure(api_key=api_key)
 
-    model_names = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+    # Updated model list — newest names first
+    model_names = [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro",
+    ]
 
+    errors = []
     for model_name in model_names:
         try:
             model = genai.GenerativeModel(model_name)
-            for attempt in range(retries):
-                try:
-                    response = model.generate_content(prompt)
-                    # Safe text extraction
-                    text = None
-                    try:
-                        text = response.text
-                    except Exception:
-                        pass
-                    if not text and hasattr(response, "candidates") and response.candidates:
-                        for part in response.candidates[0].content.parts:
-                            if hasattr(part, "text") and part.text:
-                                text = part.text
-                                break
-                    if text and text.strip():
-                        return text.strip()
-                    # Check for blocked content
-                    if hasattr(response, "prompt_feedback"):
-                        raise RuntimeError(f"Content blocked: {response.prompt_feedback}")
-                    raise RuntimeError("Empty text in response.")
-                except RuntimeError:
-                    raise
-                except Exception as e:
-                    err = str(e).lower()
-                    if "quota" in err or "rate" in err or "429" in err:
-                        time.sleep(delay * (2 ** attempt))
-                    elif attempt == retries - 1:
-                        raise
-                    else:
-                        time.sleep(delay)
-        except Exception:
-            continue  # try next model
+            response = model.generate_content(prompt)
+
+            # Safe text extraction
+            text = None
+            try:
+                text = response.text
+            except Exception:
+                pass
+
+            if not text and hasattr(response, "candidates") and response.candidates:
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, "text") and part.text:
+                        text = part.text
+                        break
+
+            if text and text.strip():
+                return text.strip()
+
+            errors.append(f"{model_name}: empty response")
+
+        except Exception as e:
+            errors.append(f"{model_name}: {str(e)}")
+            time.sleep(1)
+            continue
 
     raise RuntimeError(
-        "All Gemini models failed. Check your API key at https://aistudio.google.com"
+        f"All Gemini models failed. Errors:\n" + "\n".join(errors)
     )
